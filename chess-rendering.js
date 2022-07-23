@@ -1,3 +1,5 @@
+function() {
+
 let svg = {
   svg: (width, height, attrs={}) => {
     let rtn = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -660,3 +662,5 @@ class ChessBoard extends HTMLElement {
   }
 }
 customElements.define('chess-board', ChessBoard);
+
+}();
