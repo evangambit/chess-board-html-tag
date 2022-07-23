@@ -1,4 +1,4 @@
-function() {
+{
 
 let svg = {
   svg: (width, height, attrs={}) => {
@@ -663,4 +663,4 @@ class ChessBoard extends HTMLElement {
 }
 customElements.define('chess-board', ChessBoard);
 
-}();
+}
