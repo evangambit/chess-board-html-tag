@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FEN Render</title>
+<style>
+html {
+	width: 100%;
+}
+body {
+	max-width: 30em;
+	margin: 0 auto;
+}
+.chess-board {
+	width: min(50vh, 50vw);
+}
+</style>
+<script src="chess-rendering.js"></script>
+</head>
+<body>
+
+<chess-board fen="8/8/8/1K6/8/2P5/8/8" x-tiles="" red-tiles="b2 b3 c2 d2 d3 d4" white=1 style="width:32%"></chess-board>
+<chess-board fen="8/8/8/2K5/8/2P5/8/8" x-tiles="" red-tiles="b2 b3 c2 d2 d3" white=1 style="width:32%"></chess-board>
+<chess-board fen="8/8/8/3K4/8/2P5/8/8" x-tiles="" red-tiles="b2 b3 b4 c2 d2 d3" white=1 style="width:32%"></chess-board>
+
+
+<h1>Mastering KPvK</h1>
+
+<p>
+	This page explores the famous KPvK endgame. This end game can be unintuitive at times but is crucial for knowing how to simplify your 1-pawn advantage into a guaranteed win (and to <i>avoid</i> simplifying into a draw). It aims to allow the reader to successfully force a win in winnable positions.
+</p>
+
+<p>
+	It's only fair to remark that my own expertise before embarking on this project is small (my chess.com Elo's peak is 1505). I'm approaching this analysis in a very data-centric way, looking at literally all possible 276,120 KPvK positions &mdash; <u><b>I am ignoring positions where the pawn starts on the home row (the 2-move rule complicates analysis) and rook pawns.</b></u>.
+</p>
+
+<h2>Self Promotion</h2>
+
+<p>
+	A pawn can "self-promote" if it can successfully promote to a piece without its own king's assistance. For our purposes a pawn that is captured instantly after promotion is <i>not</i> self-promoting.
+</p>
+<p>
+	Of the 192,510 winning KPvK endgames, 83% are self-promotion endgames, so this is the obvious place to start our analysis.
+</p>
+
+<p>
+	The <a href="https://www.chess.com/terms/square-rule-chess">Square Rule</a> is a geometric trick for determining if a pawn can be successfully promoted without the assistance of its own king. You count the tiles between the pawn and its promotion square and then draw a square that includes those two tiles. <u><b>If it's your turn and the enemy king is not inside the square then your position is winning</b></u>.
+</p>
+<p>
+	In the example below, if it's black turn then black can enter the square, so the pawn cannot self promote. However, if it's white's turn then the white pawn will move closer (shrinking the square), and black's king cannot enter the square.
+</p>
+
+<p>
+	<b>Conclusion:</b> White has a guaranteed win if it's white's turn. If it's black's turn then his king will try to enter the square (by playing Kg8 or Kg7) then the result is unclear (the pawn may be able to promote with it's king's assistance).
+</p>
+
+<chess-board fen='7k/8/8/8/8/1P6/8 w - - 0 1' green-arrows="b3b8 b8g8 g8g3 g3b3" x-tiles="b8" red-arrows="h8g8"></chess-board>
+
+<p>
+	Note that this also works when blacks' king is behind the white pawn. In the example below, white promotes only if it's white's turn.
+</p>
+
+<chess-board fen='8/8/8/8/8/1P6/2k5/8 w - - 0 1' green-arrows="b3b8 b8g3 g8g3 g3b3" x-tiles="b8"></chess-board>
+
+<p>One trick is that it can be easier to visualize is to draw a diagonal from the promotion square until you're on the same rank as the pawn:</p>
+
+<chess-board fen='7k/8/8/8/8/1P6/8/8 w - - 0 1' green-arrows="b8g3 g3g8" x-tiles="b8"></chess-board>
+
+<p>One final thing to note is we have not mentioned the pawn's king at all here which is irresponsible, since a pawn's own king can block the pawn!</p>
+
+<chess-board fen='1K6/8/1P6/3k4/8/8/8/8 w - - 0 1' green-arrows="b6b8 b8d8 d8d6 d6b6"></chess-board>
+
+<p>Fortunately we can use the computer to verify an interesting fact: the square rule is valid for 100% of positions (again, ignoring rook pawns), even when a pawn is blocked by its own king. The above position is winning.</p>
+
+<h2 id="DistanceRule">The Distance Rule</h2>
+
+<p>A position where your opponent can immediately capture your pawn is a trivial draw. There are 12,382 of these (ignoring rook pawns).</p>
+
+<p>It may seem natural to extend this "trivial" case to include cases where the enemy king is closer to your pawn than your own king &mdash; surely these must be drawn too?</p>
+
+<p>Unfortunately this is not true for various reasons. For an example, consider this position (white to move) where white is winning despite black being two squares closer, because the pawn controls c4.</p>
+
+<chess-board fen='K7/8/7k/8/8/4P3/8/8 w - - 0 1' green-arrows="a8b7 b7c6 c6d5" red-arrows="h6g5 g5f5" x-tiles=f4></chess-board>
+
+<p>Fortunately we can rescue this idea by handling these cases, which I call the <b>Distance Rule</b>:</p>
+
+<ol>
+	<li>Compute the distance between your king and your pawn</li>
+	<li>Compute the distance between the enemy king and your pawn</li>
+	<li>Subtract 1 from your distance if it's your turn</li>
+	<li>Add 1 to your enemy's distance if they're in front of your pawn and on a diagonal with it.</li>
+	<li>If your distance is greater than your opponent's, then it's a draw.</li>
+</ol>
+
+<p>
+	In the above example, your naive distance from your pawn is 5 and your opponent's is 3, but after you subtract 1 from your distance (because it's your turn) and add 1 to your opponent's distance (because they lie on a diagonal in front of the pawn) then the comparison is actually 4 vs 4.
+</p>
+
+<p>
+	This doesn't necessarily mean you're winning, it just means you're not necessarily drawing (you may be drawing for other reasons).
+</p>
+
+<h2>Key Squares</h2>
+
+<p>
+	Finally, if your king is two squares in front of your pawn then you're winning, no matter whose turn it is (assuming your opponent cannot capture your pawn). These are called <a href="https://en.wikipedia.org/wiki/Key_square#Other_pawns">Key Squares</a>.
+</p>
+
+<chess-board fen="8/8/8/8/8/2P5/8/8" x-tiles="b5 c5 d5" white=1 width="45%"></chess-board>
+
+<p>
+	Once your pawn gets to the 5th rank then they key squares include the squares one in front of your pawn:
+</p>
+
+<chess-board fen="8/8/8/2P5/8/8/8/8" x-tiles="b6 c6 d6 b7 c7 d7" white=1 width="45%"></chess-board>
+
+<p>
+	The only exception are the four corner stalemates that can occur with a knight pawn:
+</p>
+
+<p>
+	The only exceptions to these rules are the 4 stalemates that occur for the knight's pawn. Here, white is one or two squares ahead of their pawn, but is not winning.
+</p>
+
+<chess-board fen='7k/5K2/6P1/8/8/8/8/8 b - - 0 1' style="width:48%"></chess-board>
+
+<chess-board fen='k1K5/8/1P6/8/8/8/8/8 b - - 0 1' style="width:48%"></chess-board>
+
+<chess-board fen='5K1k/8/6P1/8/8/8/8/8 b - - 0 1' style="width:48%"></chess-board>
+
+<chess-board fen='k7/2K5/1P6/8/8/8/8/8 b - - 0 1' style="width:48%"></chess-board>
+
+<h2>Recap</h2>
+
+<ol>
+	<li>Square Rule: If it's your turn and the enemy king is not inside the square then your position is winning.</li>
+	<li>Distance Rule: If your distance from the pawn is greater than your opponent's, the game is a draw.</li>
+	<li>Key Squares: If your king is on a key square then you're winning (so long as your opponent cannot immediately capture your pawn and you're not in one of the four stalemates).</li>
+</ol>
+
+<h2>One Ahead Of Your Pawn</h2>
+
+<p>
+	If you're only one square ahead of your pawn and it's your turn, then you always have a forced win unless your opponent is directy in front of you and it is your turn. This is an example of <a href="https://en.wikipedia.org/wiki/Opposition_(chess)">opposition</a> (a topic we will revisit later).
+</p>
+
+<chess-board fen='8/8/3k4/8/3K4/4P3/8/8 b - - 0 1' style="width:32%"></chess-board>
+
+<chess-board fen='8/8/4k3/8/4K3/4P3/8/8 b - - 0 1' style="width:32%"></chess-board>
+
+<chess-board fen='8/8/5k2/8/5K2/4P3/8/8 b - - 0 1' style="width:32%"></chess-board>
+
+<p>
+	As a direct consequence, if it's your opponent's turn then they can draw by moving to this square from a neighboring square.
+</p>
+
+<chess-board fen='8/8/3k4/8/3K4/4P3/8/8 b - - 0 1' blue-tiles="c7 d6"></chess-board>
+
+<p>
+	Again, the only exception is the 4 stalemates that occur for a knight's pawn.
+</p>
+
+<h2>Blocked Pawn</h2>
+
+<p>
+	If your pawn is not on the 7<sup>th</sup> rank then your opponent can always draw by placing their king directly in front of your pawn. Alternatively you can blunder by pushing your pawn in front of their king.
+</p>
+
+<div style="display:flex; flex-direction:row; text-align:center;">
+	<div style="width:49%">Draw</div>
+	<div style="width:49%">Draw</div>
+</div>
+<chess-board fen='8/8/8/4k3/4P3/5K2/8/8 b - - 0 1' blue-tiles="d6 e5" style="width:49%;"></chess-board>
+<chess-board fen='8/8/8/4k3/4P3/5K2/8/8 b - - 0 1' blue-tiles="e3 e4" style="width:49%;"></chess-board>
+
+<h2>Horizontally Symmetric</h2>
+
+<p>
+	Any position which is horizontally symmetric (around the pawn) is a win for white, regardless of whose turn it is. For example, white is winning here:
+</p>
+
+<chess-board fen='8/8/8/1K3k2/8/3P4/8/8 w - - 0 1' x-tiles="d1 d2 d4 d5 d6 d7 d8"></chess-board>
+
+<p>Once again, the only exception are knight pawn stalemates:</p>
+
+<chess-board fen='5K1k/8/6P1/8/8/8/8/8 w - - 0 1' style="width:48%"></chess-board>
+<chess-board fen='k1K5/8/1P6/8/8/8/8/8 w - - 0 1' style="width:48%"></chess-board>
+
+<h2>Behind and Ahead</h2>
+
+<p>
+	If your king is directly behind your pawn, then you can draw diagonal lines from your king to your pawn's rank. If your opponent is between those files and behind the pawn then it's a drawn.
+</p>
+
+<chess-board fen="8/8/8/8/3P4/3K4/8/8" red-tiles="c6 c7 c8 d5 d6 d7 d8 e6 e7 e8 c5 e5" green-arrows="d3c4 c4c8 d3e4 e4e8" x-tiles="c4 e4" white=1 style="width:32%"></chess-board>
+<chess-board fen="8/8/8/8/3P4/8/3K4/8" red-tiles="b5 b6 b7 b8 c6 c7 c8 d5 d6 d7 d8 e6 e7 e8 f5 f6 f7 f8 c5 e5" green-arrows="d2b4 d2f4 b4b8 f4f8" x-tiles="b4 f4" white=1 style="width:32%"></chess-board>
+<chess-board fen="8/8/8/8/3P4/8/8/3K4" red-tiles="a5 a6 a7 a8 b5 b6 b7 b8 c6 c7 c8 d5 d6 d7 d8 e6 e7 e8 f5 f6 f7 f8 g5 g6 g7 g8 c5 e5" x-tiles="a4 g4" green-arrows="d1g4 d1a4 a4a8 g4g8" white=1 style="width:32%"></chess-board>
+
+<p>
+	If it's your opponent's turn then they can draw by moving into this region.
+</p>
+
+<chess-board fen="8/8/6k1/8/3P4/8/3K4/8"x-tiles="b4 f4" green-arrows="g6f6" white=1></chess-board>
+
+<p>
+	Moreover, if you have to be on a rank behind your pawn, directly behind it is the best place to be within that rank. This means your opponent can draw from these same regions whenever your king is on the same rank.
+</p>
+
+<chess-board fen="8/8/8/8/3P4/5K2/8/8" red-tiles="c6 c7 c8 d5 d6 d7 d8 e6 e7 e8 c5 e5" green-arrows="f3d3 d3e4 d3c4" x-tiles="c4 e4" white=1 style="width:32%"></chess-board>
+
+<chess-board fen="8/8/8/8/3P4/8/K7/8" red-tiles="b5 b6 b7 b8 c6 c7 c8 d5 d6 d7 d8 e6 e7 e8 f5 f6 f7 f8 c5 e5" white=1 style="width:32%" green-arrows="a2d2 d2b4 d2f4" x-tiles="b4 f4"></chess-board>
+
+<chess-board fen="8/8/8/8/3P4/8/8/7K" red-tiles="b5 b6 b7 b8 c6 c7 c8 d5 d6 d7 d8 e6 e7 e8 f5 f6 f7 f8 c5 e5" white=1 style="width:32%" green-arrows="h1d1 d1a4 d1g4" x-tiles="a4 g4"></chess-board>
+
+<h2>Opposition</h2>
+
+<p>
+	You have "opposition" when you're directly across from the enemy king and it is not your move. This is very relevant when in an endgame with only kings and pawns, since in these positions it is very common that a king <i>must</i> move (e.g. if their pawns have no legal moves, or if any pawn moves would lose the game).
+</p>
+
+<p>
+	To understand why opposition is important, we should first consider a board with only kings:
+</p>
+
+<chess-board fen="8/8/8/4k3/8/4K3/8/8"></chess-board>
+
+<p>
+	If it's white's turn, then these are the squres that white's king will be able to get to, no matter what black does:
+</p>
+
+<chess-board fen="8/8/8/4k3/8/4K3/8/8" green-tiles="a1 b1 c1 d1 e1 f1 g1 h1 a2 b2 c2 d2 e2 f2 g2 h2 a3 b3 c3 d3 e3 f3 g3 h3"></chess-board>
+
+<p>
+	If you're white and you want to get to one of the other squares then you need to have the opposition &mdash; that is, it must be your opponent's turn.
+</p>
+
+<p>
+	Opposition thus has two purposes: it allows you to prevent the enemy king from accessing any squares in front of him, and allows you to access the squares in front of yourself.
+</p>
+
+<p>
+	When you have the opposition, the enemy king is forced to move to the side, allowing you access to a new region of the board. In the diagram below, black must choose whether to allow you onto the left or right side of the board, demonstrating the offensive power of opposition.
+</p>
+
+<chess-board fen="8/8/p7/P3k2p/7P/4K3/8/8" red-arrows="e5f5" green-tiles="d4 c4 c5 b4 b5 b6 a4 a5 a6 a7" style="width:45%"></chess-board>
+
+<chess-board fen="8/8/p7/P3k2p/7P/4K3/8/8" red-arrows="e5d5" green-tiles="f4 g5 h6 g4 h5 h4" style="width:45%"></chess-board>
+
+<p>
+	On the other hand, if your opponent has opposition, then they can stop you from making any progress, forcing a draw!
+</p>
+
+<p>
+	While opposition is important to know as a means of accessing key squares (e.g. achieving one of the positions above), it is not a reliable way to determining whether your position is winning in a KPvP endgame. Below we enumerate the <i>only</i> KPvK positions that are "zugzwang" &mdash; i.e. only winning if it's your opponent's turn.
+</p>
+
+<h3>Zugzwang Position 1</h3>
+
+<chess-board fen='8/8/3k4/8/3K4/5P2/8/8 b - - 0 1'></chess-board>
+
+<p>
+	This is by far the most common position: you're one rank in front of your pawn and your enemy is directly across from you. In this case if you have opposition winning is simple: walk over to your pawn and then achieve a "Protected Path" position when your opponent moves away.
+</p>
+
+<chess-board fen='8/8/3k4/8/3K4/5P2/8/8 b - - 0 1' green-arrows="d4e4 e4f4 f4e5" red-arrows="d6e6 e6f6 f6g6" style="width:49%"></chess-board>
+
+<chess-board fen='8/8/6k1/4K3/8/5P2/8/8 b - - 0 1' green-tiles="" style="width:49%"></chess-board>
+
+<p>
+	(Note: if your opponent is on the back rank then this isn't zugzwang &mdash; you're winning no matter whose move it is, since you're on a key square).
+</p>
+
+<h3>Zugzwang Position Types 2, 3, and 4</h3>
+
+<p>
+	The other three zugzwangs only occur when your opponent's king is on the back rank. These should almost never happen to you, since you should be keeping your king in front of your pawn.
+</p>
+
+<chess-board fen='3k4/3P4/4K3/8/8/8/8/8 b - - 0 1' style="width:32%"></chess-board>
+
+<chess-board fen='3k4/8/3KP3/8/8/8/8/8 b - - 0 1' style="width:32%"></chess-board>
+
+<chess-board fen='k7/8/1PK6/8/8/8/8/8 b - - 0 1' style="width:32%"></chess-board>
+
+<h2>Distant Opposition</h2>
+
+<p>
+	Distant opposition is like opposition, but where there are an odd number of tiles between your king and your opponent's king. For example:
+</p>
+
+<chess-board fen="8/3k4/8/8/8/8/8/3K4" style="width:48%"></chess-board>
+
+<chess-board fen="8/8/3k4/8/8/8/3K4/8" style="width:48%"></chess-board>
+
+<p>
+	The idea is that as the kings march toward each other, one will establish ordinary opposition, preventing the other king from moving forward.
+</p>
+
+<p>
+	Below we mark with an "x" all the squares where black's king needs to be to draw the game when it's white's turn. Red squares indicate where black's king needs to be when it's black's turn.
+</p>
+
+<chess-board fen="8/8/8/8/8/2PK4/8/8" x-tiles="c5 c7 d5 d7" red-tiles="b4 b5 b6 b7 b8 c5 c6 c7 c8 d5 d6 d7 d8 e5 e6 e7 e8" style="width:48%"></chess-board>
+
+<chess-board fen="8/8/8/8/8/2P1K3/8/8" x-tiles="c4 c5 c6 c7 d5 d7 e5 e7" red-tiles="b2 b3 b4 b5 b6 b7 b8 c2 c4 c5 c6 c7 c8 d5 d6 d7 d8 e5 e6 e7 e8 f5 f6 f7 f8" style="width:48%"></chess-board>
+
+<chess-board fen="8/8/8/8/8/2P2K2/8/8" x-tiles="b3 b5 b6 b7 c4 c5 c6 c7 d3 d5 d6 d7 e5 e7 f5 f7" red-tiles="a2 a3 a4 a5 a6 a7 a8 b2 b3 b4 b5 b6 b7 b8 c2 c4 c5 c6 c7 c8 d2 d3 d4 d5 d6 d7 d8 e5 e6 e7 e8 f5 f6 f7 f8 g5 g6 g7 g8" style="width:48%"></chess-board>
+
+<chess-board fen="8/8/8/8/8/2P3K1/8/8" x-tiles="a3 a4 a5 a6 a7 a8 b3 b5 b6 b7 b8 c4 c5 c6 c7 c8 d3 d5 d6 d7 d8 e3 e4 e5 e6 e7 e8 f5 f7 g5 g7" red-tiles="a2 a3 a4 a5 a6 a7 a8 b2 b3 b4 b5 b6 b7 b8 c2 c4 c5 c6 c7 c8 d2 d3 d4 d5 d6 d7 d8 e2 e3 e4 e5 e6 e7 e8 f5 f6 f7 f8 g5 g6 g7 g8 h5 h6 h7 h8" style="width:48%"></chess-board>
+
+<p>
+	This can lead to some counterintuitive ideas. For example in the below position, the green arrow draws for black while the red arrow loses:
+</p>
+
+<chess-board fen="8/8/6k1/8/8/2P3K1/8/8" green-arrows="g6g7" red-arrows="g6f6"></chess-board>
+
+<p>
+	This also shows that <i>avoiding</i> distant opposition is nearly impossible for white.
+</p>
+
+<chess-board fen="8/8/6k1/8/8/2P3K1/8/8" green-arrows="g6g7" red-arrows="g6f6"></chess-board>
+
+</body>
+</html>
